@@ -36,6 +36,7 @@ def sendInfo(appname, addr, params):
         response = conn.getresponse()
         status = response.status
         conn.close()
+        # print(status, response.reason)
         return status
     except:
         msg = ('Error send data to Server Agent', )
@@ -78,7 +79,8 @@ class SystemInfo(object):
                'UID: {0}'.format(self._uid), 
                'Domain: {0}\n'.format(self._domain), 
                '{0}:{1} {2}\n'.format(self._server['addr'], self._server['port'], self._versionOS),
-               ]        
+               ]  
+        
         writeLog(self._appname, msg)
         # push to server agent [event='start']
         addr, params = self.prepare_send('start') 
@@ -107,6 +109,7 @@ class SystemInfo(object):
                     return tmp[-1]
         except:
             return ""
+
    
     def read_regConfig(self):
         try:
@@ -159,10 +162,16 @@ class SystemInfo(object):
     def prepare_send(self, event):
         params = {'event': event, 'uid':self._uid, 'hostname' : self._host, 
                   'localip': self._ip, 'version': self._versionOS, 'domain': self._domain, 
-                  'starttime': self._starttime, 'endtime': self._endtime, 
-                  'username': self._user, 'logintime': self._logintime, 'logofftime': self._logofftime}
+                  'starttime': self._starttime.timestamp(), 'endtime': "", 
+                  'username': self._user, 'logintime': "", 'logofftime': ""}
         if event == "logoff":
             params['username'] = self._lastuser
+        if self._endtime:
+            params['endtime'] = self._endtime.timestamp()
+        if self._logintime:
+            params['logintime'] = self._logintime.timestamp()  
+        if self._logofftime:
+            params['logofftime'] = self._logofftime.timestamp()        
         addr = self._server['addr'] + ":" + self._server['port']
         return addr, params
     
@@ -170,6 +179,7 @@ class SystemInfo(object):
 class ClientAgent(win32serviceutil.ServiceFramework):
     _svc_name_ = "Monitoring Client Agent"
     _svc_display_name_ = "Monitoring Client Agent"
+    sInfo = None
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
@@ -184,7 +194,7 @@ class ClientAgent(win32serviceutil.ServiceFramework):
         win32event.SetEvent(self.hWaitStop)
 
     def SvcDoRun(self):
-        rc = None         
+        rc = None 
         while rc != win32event.WAIT_OBJECT_0 and not self.sInfo.config_error:
             self.sInfo.update()
             rc = win32event.WaitForSingleObject(self.hWaitStop, self.timeout)
@@ -197,3 +207,11 @@ if __name__ == '__main__':
         servicemanager.StartServiceCtrlDispatcher()
     else:
         win32serviceutil.HandleCommandLine(ClientAgent)
+    #sInfo = SystemInfo("TestTest")
+    #print(sInfo._host)
+    #sInfo.update()
+    #print(sInfo.config_error)
+    #print('Agent start: {0}\n'.format(sInfo._starttime.strftime("%Y-%m-%d %H:%M:%S")))
+    #sInfo.update()
+    #sInfo.stop()
+    #print('Agent stop: {0}\n'.format(sInfo._endtime.strftime("%Y-%m-%d %H:%M:%S")))
