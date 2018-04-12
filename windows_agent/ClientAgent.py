@@ -13,8 +13,11 @@ import win32evtlogutil
 import uuid
 import http.client
 import urllib.parse
+import json
 
 from winreg import *
+
+TIMEOUT = 30
 
 
 def writeLog(appname, message, error=False):
@@ -29,16 +32,18 @@ def writeLog(appname, message, error=False):
     
 def sendInfo(appname, addr, params):
     try:
-        data = urllib.parse.urlencode(params)
-        headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
-        conn = http.client.HTTPConnection(addr)
-        conn.request("POST", "", data, headers)
+        #data = urllib.parse.urlencode(params)
+        #print(data)
+        headers = {"Content-type": "application/json", "Accept": "text/plain"}
+        conn = http.client.HTTPConnection(addr, timeout=1)
+        conn.request("POST", "/", json.dumps(params), headers)
         response = conn.getresponse()
         status = response.status
         conn.close()
         # print(status, response.reason)
         return status
     except:
+        conn.close()
         msg = ('Error send data to Server Agent', )
         writeLog(appname, msg, True)
     
@@ -163,15 +168,21 @@ class SystemInfo(object):
         params = {'event': event, 'uid':self._uid, 'hostname' : self._host, 
                   'localip': self._ip, 'version': self._versionOS, 'domain': self._domain, 
                   'starttime': self._starttime.timestamp(), 'endtime': "", 
-                  'username': self._user, 'logintime': "", 'logofftime': ""}
+                  'host_uptime': datetime.datetime.now().timestamp() - self._starttime.timestamp(), 
+                  'username': self._user, 'logintime': "", 'logofftime': "",
+                  'user_uptime': 0}
         if event == "logoff":
             params['username'] = self._lastuser
         if self._endtime:
             params['endtime'] = self._endtime.timestamp()
+            params['host_uptime'] = params['endtime'] - params['starttime']
         if self._logintime:
-            params['logintime'] = self._logintime.timestamp()  
+            params['logintime'] = self._logintime.timestamp()
+            params['user_uptime'] = datetime.datetime.now().timestamp() - params['logintime']
         if self._logofftime:
-            params['logofftime'] = self._logofftime.timestamp()        
+            params['logofftime'] = self._logofftime.timestamp()    
+            if self._logintime:
+                params['user_uptime'] =  params['logofftime'] - self._logintime.timestamp()
         addr = self._server['addr'] + ":" + self._server['port']
         return addr, params
     
@@ -184,7 +195,7 @@ class ClientAgent(win32serviceutil.ServiceFramework):
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
         self.hWaitStop = win32event.CreateEvent(None, 0, 0, None)
-        self.timeout = 30000 # 30 секунд
+        self.timeout = TIMEOUT * 1000 # 30 секунд
         #socket.setdefaulttimeout(60)
         self.sInfo = SystemInfo(self._svc_display_name_)       
 

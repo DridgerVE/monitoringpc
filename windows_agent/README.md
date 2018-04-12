@@ -10,7 +10,7 @@
 
     env = PYTHONPATH\Scripts (C:\Users\admin\AppData\Local\Programs\Python\Python36-32\Scripts)
 
-    (env)$ pip install pyinstaller, wmi
+    (env)$ pip install -r requirements.txt
 
 ## Build
 
