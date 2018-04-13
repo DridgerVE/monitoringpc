@@ -17,7 +17,7 @@ import json
 
 from winreg import *
 
-TIMEOUT = 30
+TIMEOUT = 0.5
 
 
 def writeLog(appname, message, error=False):
@@ -67,6 +67,7 @@ class SystemInfo(object):
         self._versionOS = ""
         self._error = False
         self._server = {'addr': "", 'port': ""}
+        self._stopped = False
         self.start()
     
     @property
@@ -92,12 +93,14 @@ class SystemInfo(object):
         sendInfo(self._appname, addr, params)
         
     def stop(self):
-        self._endtime = datetime.datetime.now()
-        msg = ('Agent stop: {0}'.format(self._endtime.strftime("%Y-%m-%d %H:%M:%S")), )
-        writeLog(self._appname, msg)        
-        # push to server agent [event='stop']
-        addr, params = self.prepare_send('stop') 
-        sendInfo(self._appname, addr, params)
+        if not self._stopped:
+            self._stopped = True
+            self._endtime = datetime.datetime.now()
+            # push to server agent [event='stop']
+            addr, params = self.prepare_send('stop') 
+            sendInfo(self._appname, addr, params)        
+            msg = ('Agent stop: {0}'.format(self._endtime.strftime("%Y-%m-%d %H:%M:%S")), )
+            writeLog(self._appname, msg)        
         
     def get_domain(self):
         try:  
@@ -190,25 +193,43 @@ class SystemInfo(object):
 class ClientAgent(win32serviceutil.ServiceFramework):
     _svc_name_ = "Monitoring Client Agent"
     _svc_display_name_ = "Monitoring Client Agent"
-    sInfo = None
+    _svc_description_ = "Monitoring Agent (SCHOOL1212)"
+    _svc_deps_ = ("Dhcp", "eventlog")
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
         self.hWaitStop = win32event.CreateEvent(None, 0, 0, None)
-        self.timeout = TIMEOUT * 1000 # 30 секунд
-        #socket.setdefaulttimeout(60)
-        self.sInfo = SystemInfo(self._svc_display_name_)       
+        self.timeout = TIMEOUT * 1000 
+        #socket.setdefaulttimeout(TIMEOUT)
+        self.sInfo = None      
+        self.seconds = 0 
 
     def SvcStop(self):
-        self.sInfo.stop()
+        if self.sInfo is not None:
+            self.sInfo.stop()
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
         win32event.SetEvent(self.hWaitStop)
-
+        self.ReportServiceStatus(win32service.SERVICE_STOPPED)
+        
+    def SvcShutdown(self):
+        self.SvcStop()
+        
     def SvcDoRun(self):
         rc = None 
-        while rc != win32event.WAIT_OBJECT_0 and not self.sInfo.config_error:
+        try:
+            self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
+            self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+            self.sInfo = SystemInfo(self._svc_display_name_)
             self.sInfo.update()
-            rc = win32event.WaitForSingleObject(self.hWaitStop, self.timeout)
+            while rc != win32event.WAIT_OBJECT_0 and not self.sInfo.config_error:
+                if self.seconds >= 30:
+                    self.sInfo.update()
+                    self.seconds = 0 
+                rc = win32event.WaitForSingleObject(self.hWaitStop, self.timeout)
+                self.seconds += self.timeout / 1000
+            self.SvcStop()
+        except:
+            self.SvcStop()
 
 
 if __name__ == '__main__':

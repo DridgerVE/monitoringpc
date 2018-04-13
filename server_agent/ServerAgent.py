@@ -17,7 +17,7 @@ UNAUTHORIZED = 401
 
 QUEUE_TIMEOUT = 0.1
 SLEEP_TIMEOUT = 0.1
-METRICS_TIMEOUT = 5
+METRICS_TIMEOUT = 10
 
 # возможные состояния ПК
 STATE_OFF = 0
@@ -29,7 +29,7 @@ STATE = {
     STATE_ON: "ON",
     STATE_UNKNOWN: "UNKNOWN",
 }
-# таймауты для автоматического изменения таймаута
+# таймауты для автоматического изменения состояния
 STATE_TIMEOUT_UNKNOWN = 60
 STATE_TIMEOUT_OFF = 300
 
@@ -228,19 +228,21 @@ class HTTPRequestMetric(threading.Thread):
     def stop(self):
         self._stopped = True
 
+    def clear_metrics(self):
+        for el in self.m1_old:
+            self.m1.remove(*el)
+        self.m1_old = []
+        for el in self.m2_old:
+            self.m2.remove(*el)
+        self.m2_old = []
+        for el in self.m3_old:
+            self.m3.remove(*el)
+        self.m3_old = []
+
     def run(self):
         """Основной цикл обработки данных"""
         while not self._stopped:
-            time.sleep(self._timeout / 2)
-            for el in self.m1_old:
-                self.m1.remove(*el)
-            self.m1_old = []
-            for el in self.m2_old:
-                self.m2.remove(*el)
-            self.m2_old = []
-            for el in self.m3_old:
-                self.m3.remove(*el)
-            self.m3_old = []
+            self.clear_metrics()
             for key, val in self.metrics.items():
                 self.m1.labels(key, STATE[val["state"]]).set(1)
                 self.m1_old.append((key, STATE[val["state"]]))
@@ -253,7 +255,7 @@ class HTTPRequestMetric(threading.Thread):
                     self.state_off[key] = self.state_off.get(key, 0) + self._timeout
                 elif val["state"] != STATE_OFF:
                     self.state_off[key] = 0
-            time.sleep(self._timeout / 2)
+            time.sleep(self._timeout)
 
 
 def main():
