@@ -18,7 +18,7 @@
 
 ## Run
 
-    (env) dist\ClientAgent.exe install
+    (env) dist\ClientAgent.exe --startup=auto install
     Installing service ClientAgent
     Service installed
 
