@@ -246,15 +246,14 @@ class HTTPRequestMetric(threading.Thread):
             for key, val in self.metrics.items():
                 self.m1.labels(key, STATE[val["state"]]).set(1)
                 self.m1_old.append((key, STATE[val["state"]]))
-                if self.state_off.get(key, 0) < STATE_TIMEOUT_UNKNOWN:
+                if val["state"] != STATE_OFF and self.state_off.get(key, 0) < STATE_TIMEOUT_UNKNOWN:
                     self.m2.labels(key, val["hostname"], val["ip"], val["domainname"]).set(val["host_uptime"])
                     self.m2_old.append((key, val["hostname"], val["ip"], val["domainname"]))
                     if val["username"]:
                         self.m3.labels(key, val["hostname"], val["ip"], val["domainname"], val["username"]).set(val["user_uptime"])
                         self.m3_old.append((key, val["hostname"], val["ip"], val["domainname"], val["username"]))
-                    self.state_off[key] = self.state_off.get(key, 0) + self._timeout
-                elif val["state"] != STATE_OFF:
-                    self.state_off[key] = 0
+                        self.state_off[key] = \
+                            self.state_off.get(key, 0) + self._timeout if val["state"] == STATE_UNKNOWN else 0
             time.sleep(self._timeout)
 
 
