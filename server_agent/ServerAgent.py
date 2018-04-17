@@ -254,6 +254,8 @@ class HTTPRequestMetric(threading.Thread):
                         self.m3_old.append((key, val["hostname"], val["ip"], val["domainname"], val["username"]))
                         self.state_off[key] = \
                             self.state_off.get(key, 0) + self._timeout if val["state"] == STATE_UNKNOWN else 0
+                elif val["state"] == STATE_ON:
+                    self.state_off[key] = 0
             time.sleep(self._timeout)
 
 
