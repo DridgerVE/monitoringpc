@@ -20,7 +20,7 @@
         -p PORT           Server agent web server port
         -l LOG            Log filename
 
-##Параметры подключения к БД PostgreSQL
+## Параметры подключения к БД PostgreSQL
 
     Параметры должны находиться в переменных окружения
         DB_PORT	- порт
