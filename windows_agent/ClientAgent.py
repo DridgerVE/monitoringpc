@@ -14,11 +14,12 @@ import uuid
 import http.client
 import urllib.parse
 import json
+import hashlib
 
 from winreg import *
 
 TIMEOUT = 0.5
-
+SALT = "29"
 
 def writeLog(appname, message, error=False):
     # message - итерируемый объект (например, кортеж строк)
@@ -31,21 +32,25 @@ def writeLog(appname, message, error=False):
         
     
 def sendInfo(appname, addr, params):
-    try:
-        #data = urllib.parse.urlencode(params)
-        #print(data)
-        headers = {"Content-type": "application/json", "Accept": "text/plain"}
-        conn = http.client.HTTPConnection(addr, timeout=1)
-        conn.request("POST", "/", json.dumps(params), headers)
-        response = conn.getresponse()
-        status = response.status
+    max_attempt = 5
+    cur_attempt = 1
+    conn = None
+    headers = {"Content-type": "application/json", "Accept": "text/plain"}
+    while cur_attempt <= max_attempt:
+        try:
+            cur_attempt += 1
+            conn = http.client.HTTPConnection(addr, timeout=1)
+            conn.request("POST", "/", json.dumps(params), headers)
+            response = conn.getresponse()
+            status = response.status
+            conn.close()
+            return status
+        except:
+            continue
+    if conn is not None:
         conn.close()
-        # print(status, response.reason)
-        return status
-    except:
-        conn.close()
-        msg = ('Error send data to Server Agent', )
-        writeLog(appname, msg, True)
+    msg = ('Error send data to Server Agent', )
+    writeLog(appname, msg, True)
     
 
 class SystemInfo(object):
@@ -174,6 +179,7 @@ class SystemInfo(object):
                   'host_uptime': datetime.datetime.now().timestamp() - self._starttime.timestamp(), 
                   'username': self._user, 'logintime': "", 'logofftime': "",
                   'user_uptime': 0}
+        params["token"] = hashlib.sha512((datetime.datetime.now().strftime("%Y%m%d%H") + SALT).encode("utf-8")).hexdigest()
         if event == "logoff":
             params['username'] = self._lastuser
         if self._endtime:
@@ -239,11 +245,3 @@ if __name__ == '__main__':
         servicemanager.StartServiceCtrlDispatcher()
     else:
         win32serviceutil.HandleCommandLine(ClientAgent)
-    #sInfo = SystemInfo("TestTest")
-    #print(sInfo._host)
-    #sInfo.update()
-    #print(sInfo.config_error)
-    #print('Agent start: {0}\n'.format(sInfo._starttime.strftime("%Y-%m-%d %H:%M:%S")))
-    #sInfo.update()
-    #sInfo.stop()
-    #print('Agent stop: {0}\n'.format(sInfo._endtime.strftime("%Y-%m-%d %H:%M:%S")))

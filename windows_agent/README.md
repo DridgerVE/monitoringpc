@@ -6,29 +6,15 @@
   * [Visual C++ Build Tools 2015](http://go.microsoft.com/fwlink/?LinkId=691126)
   * PyInstaller 3.2
 
-## Install requirements
+## Install requirements, build and run service
 
-    env = PYTHONPATH\Scripts (C:\Users\admin\AppData\Local\Programs\Python\Python36-32\Scripts)
-
-    (env)$ pip install -r requirements.txt
-
-## Build
-
-    (env)$ pyinstaller -F --hidden-import=win32timezone ClientAgent.py
-
-## Run
-
-    (env) dist\ClientAgent.exe --startup=delayed install
-    Installing service ClientAgent
-    Service installed
-
-    (env) dist\ClientAgent.exe start
-    Starting service ClientAgent
+    Важно, чтобы сущуствовала переменная окружения PYTHONPATH с правильным путем
+    set PYTHONPATH=C:\Users\admin\AppData\Local\Programs\Python\Python36-32\
+    Запуск от имени администратора install.bat
 
 ## Clean
 
-    (env) dist\ClientAgent.exe stop
-    (env) dist\ClientAgent.exe remove
+    Запуск от имени администратора uninstall.bat
 
 ## Описание работы
 
