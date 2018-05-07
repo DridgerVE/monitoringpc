@@ -8,8 +8,8 @@
 
 ## Install requirements, build and run service
 
-    Важно, чтобы сущуствовала переменная окружения PYTHONPATH с правильным путем
-    set PYTHONPATH=C:\Users\admin\AppData\Local\Programs\Python\Python36-32\
+    Важно, чтобы PYTHONPATH был добавлен в перемнную окружения PATH
+    (C:\Users\admin\AppData\Local\Programs\Python\Python36-32\)
     Запуск от имени администратора install.bat
 
 ## Clean
