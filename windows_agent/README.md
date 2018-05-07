@@ -2,9 +2,9 @@
 
 ## Requirements
 
-  * Python 3.5.x
+  * Python >=3.5
   * [Visual C++ Build Tools 2015](http://go.microsoft.com/fwlink/?LinkId=691126)
-  * PyInstaller 3.2
+  * PyInstaller >=3.2
 
 ## Install requirements, build and run service
 
@@ -27,4 +27,5 @@
         время выключения хоста (остановка службы),
         имя домена и активного пользователя (используем обертку wmi),
         время входа пользователя в систему и время выхода из системы
-    4. Push серверу происходит при старте и остановке, а также раз в 30 секунд (отпраляются события "login", "logoff", "state")
+    4. Push серверу происходит при старте и остановке, а также раз в 30 секунд (отправляются события "start",
+       "stop", "login", "logoff", "state")

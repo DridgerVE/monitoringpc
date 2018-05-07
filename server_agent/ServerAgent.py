@@ -143,7 +143,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
 
 class HTTPRequestMetric(threading.Thread):
 
-    def __init__(self, result_q, q_timeout, sleep_time, port, timeout, **kwargs):
+    def __init__(self, result_q, q_timeout, port, timeout, **kwargs):
         super().__init__(**kwargs)
         self.metrics = dict()
         self.m1 = Gauge(COMPUTER_STATE, "PC state", ["uid", "statename"])
@@ -161,7 +161,6 @@ class HTTPRequestMetric(threading.Thread):
         self.result_q = result_q
         self.timeout = q_timeout
         self._seconds = 0
-        self._sleep = sleep_time
 
     def stop(self):
         self._stopped = True
@@ -191,8 +190,7 @@ class HTTPRequestMetric(threading.Thread):
 
     #
     def read_queue(self):
-        time.sleep(self._sleep)
-        self._seconds += self._sleep
+        self._seconds += self._timeout
         if self._seconds > 60:
             self._seconds = 0
             self.check_state()
@@ -255,7 +253,7 @@ def main():
     thread_db.start()
     logging.info("Thread is started: {0}".format(thread_db.name))
 
-    client_prom = HTTPRequestMetric(result_queue, QUEUE_TIMEOUT, SLEEP_TIMEOUT, PROMETHEUS_CLIENT_PORT, METRICS_TIMEOUT)
+    client_prom = HTTPRequestMetric(result_queue, QUEUE_TIMEOUT, PROMETHEUS_CLIENT_PORT, METRICS_TIMEOUT)
     client_prom.start()
     logging.info("Prometheus client is started")
 
