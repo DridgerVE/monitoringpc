@@ -1,0 +1,7 @@
+FROM python:3.6
+MAINTAINER Vitaly Dridger <DridgerVE@s1212.ru>
+ADD . /opt/app
+RUN pip install -r /opt/app/requirements.txt
+EXPOSE 8080
+EXPOSE 9332
+CMD python /opt/app/ServerAgent.py

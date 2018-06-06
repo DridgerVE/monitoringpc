@@ -104,6 +104,7 @@ class Worker(threading.Thread):
                       "host_uptime": data["host_uptime"], "state": STATE_ON,
                       "username": data["username"], "user_uptime": data["user_uptime"],
                       "time_last_action": datetime.datetime.now().timestamp(), "is_read_metrics": False,
+                      "versionsystem": data["version"]
                       }
             if data["event"] == "stop":
                 m_data["state"] = STATE_OFF
@@ -147,8 +148,8 @@ class HTTPRequestMetric(threading.Thread):
         super().__init__(**kwargs)
         self.metrics = dict()
         self.m1 = Gauge(COMPUTER_STATE, "PC state", ["uid", "statename"])
-        self.m2 = Gauge(HOST_UPTIME, "Host uptime", ["uid", "hostname", "ip", "domainname"])
-        self.m3 = Gauge(USER_UPTIME, "User uptime", ["uid", "hostname", "ip", "domainname", "username"])
+        self.m2 = Gauge(HOST_UPTIME, "Host uptime", ["uid", "hostname", "ip", "domainname", "versionsystem"])
+        self.m3 = Gauge(USER_UPTIME, "User uptime", ["uid", "hostname", "ip", "domainname", "username", "versionsystem"])
         self._port = port
         self._timeout = timeout
         self._stopped = False
@@ -209,12 +210,12 @@ class HTTPRequestMetric(threading.Thread):
             self.m1.labels(key, STATE[val["state"]]).set(1)
             self.m1_old.append((key, STATE[val["state"]]))
             if val["state"] != STATE_OFF and self.state_off.get(key, 0) < STATE_TIMEOUT_UNKNOWN:
-                self.m2.labels(key, val["hostname"], val["ip"], val["domainname"]).set(val["host_uptime"])
-                self.m2_old.append((key, val["hostname"], val["ip"], val["domainname"]))
+                self.m2.labels(key, val["hostname"], val["ip"], val["domainname"], val["versionsystem"]).set(val["host_uptime"])
+                self.m2_old.append((key, val["hostname"], val["ip"], val["domainname"], val["versionsystem"]))
                 if val["username"]:
-                    self.m3.labels(key, val["hostname"], val["ip"], val["domainname"], val["username"]).set(
+                    self.m3.labels(key, val["hostname"], val["ip"], val["domainname"], val["username"], val["versionsystem"]).set(
                         val["user_uptime"])
-                    self.m3_old.append((key, val["hostname"], val["ip"], val["domainname"], val["username"]))
+                    self.m3_old.append((key, val["hostname"], val["ip"], val["domainname"], val["username"], val["versionsystem"]))
                     self.state_off[key] = \
                         self.state_off.get(key, 0) + self._timeout if val["state"] == STATE_UNKNOWN else 0
             elif val["state"] == STATE_ON:
@@ -232,7 +233,7 @@ class HTTPRequestMetric(threading.Thread):
 def main():
     parser = argparse.ArgumentParser(description='Server agent web server')
     parser.add_argument('-w', default=4, type=int, dest='workers_count', help='Worker count')
-    parser.add_argument('-a', default='', dest='host', help='Server agent web server bind address')
+    parser.add_argument('-a', default='0.0.0.0', dest='host', help='Server agent web server bind address')
     parser.add_argument('-p', default=8080, type=int, dest='port', help='Server agent web server port')
     parser.add_argument('-l', default=None, dest='log', help='Log filename')
     args = parser.parse_args()
