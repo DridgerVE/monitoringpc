@@ -12,7 +12,7 @@ import datetime
 import win32evtlogutil
 import uuid
 import http.client
-import urllib.parse
+# import urllib.parse
 import json
 import hashlib
 
@@ -36,11 +36,29 @@ def sendInfo(appname, addr, params):
     cur_attempt = 1
     conn = None
     headers = {"Content-type": "application/json", "Accept": "text/plain"}
+    address = addr.split("://")
+    if len(address) != 2:
+        msg = ('Bad server name [apiURL]',)
+        writeLog(appname, msg, True)
+        return
+    type_con, address = address[0], address[1]
+    if type_con.lower() not in ['http', 'https']:
+        msg = ('Bad protocol request',)
+        writeLog(appname, msg, True)
+        return
+    address = address.split("/")
+    if len(address) != 2:
+        msg = ('Bad request url',)
+        writeLog(appname, msg, True)
+        return
     while cur_attempt <= max_attempt:
         try:
             cur_attempt += 1
-            conn = http.client.HTTPConnection(addr, timeout=1)
-            conn.request("POST", "/", json.dumps(params), headers)
+            if type_con == 'http':
+                conn = http.client.HTTPConnection(address[0], timeout=1)
+            else:
+                conn = http.client.HTTPSConnection(address[0], timeout=1)
+            conn.request("POST", "/"+address[1], json.dumps(params), headers)
             response = conn.getresponse()
             status = response.status
             conn.close()
@@ -71,7 +89,7 @@ class SystemInfo(object):
         self._uid = ""
         self._versionOS = ""
         self._error = False
-        self._server = {'addr': "", 'port': ""}
+        self._server = {'addr': "", 'port': "", 'apiURL': ""}
         self._stopped = False
         self.start()
     
@@ -123,14 +141,14 @@ class SystemInfo(object):
         except:
             return ""
 
-   
     def read_regConfig(self):
         try:
             regpath = "SOFTWARE\SoshWFE"
             key = OpenKey(HKEY_LOCAL_MACHINE, regpath)
             # параметры подключения к серверному агенту
             self._server = {'addr': QueryValueEx(key, "serverIp")[0], 
-                            'port': QueryValueEx(key, "serverPort")[0]}
+                            'port': QueryValueEx(key, "serverPort")[0],
+                            'apiURL': QueryValueEx(key, "apiURL")[0]}
             # версия нашей сборки операционной системы
             self._versionOS = QueryValueEx(key, "versionSystem")[0]
             try:
@@ -145,8 +163,7 @@ class SystemInfo(object):
             self._error = True
             CloseKey(key)
             return False
-        
-        
+
     def local_ip(self):
         return socket.gethostbyname(socket.getfqdn())
     
@@ -192,7 +209,8 @@ class SystemInfo(object):
             params['logofftime'] = self._logofftime.timestamp()    
             if self._logintime:
                 params['user_uptime'] =  params['logofftime'] - self._logintime.timestamp()
-        addr = self._server['addr'] + ":" + self._server['port']
+        # addr = self._server['addr'] + ":" + self._server['port']
+        addr = self._server['apiURL']
         return addr, params
     
     
